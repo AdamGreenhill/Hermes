@@ -1,4 +1,4 @@
-import argparse
+mport argparse
 import smtplib
 import sys
 import time
@@ -8,6 +8,12 @@ def mailgun_emailer(api, domain, filename, subject, sender, recipient):
         pass
 
 def gmail_emailer(username, password, filename, subject, sender, recipient):
+        print(username)
+        print(password)
+        print(filename)
+        print(subject)
+        print(sender)
+        print(recipient)
         with open(filename) as fp:
                 # Create a text/plain message
                 body = fp.read()
@@ -48,16 +54,17 @@ def postfix_emailer(filename, subject, sender, recipient):
 
 def email_controller(args, destination_email):
         # Decide where to route e-mails to
-        if args.api:
+        if args.infrastructure == "mailgun":
                 pass
-        elif args.username and args.password:
-                pass
-        else:
-                pass
+        elif args.infrastructure == "gmail":
+                gmail_emailer(args.username, args.password, args.body, args.subject, args.email_author, destination_email)
+        elif args.infrastructure == "postfix":
+                postfix_emailer(args.body, args.subject, args.email_author, destination_email)
 
 def main():
         # Create initial definition of variables
         body = ""
+        password = ""
 
         # Define arguments for the script
         parser     = argparse.ArgumentParser(description='Sends e-mails via a number of means.')
@@ -71,7 +78,7 @@ def main():
         required.add_argument('-i','--infrastructure', help='Technology sending the e-mails (gmail, mailgun, local postfix)')
         required.add_argument('-b','--body', help='Textfile containing the body of the email')
         required.add_argument('-s','--subject', help='E-mail subject')
-        required.add_argument('-f','--from-email', help='Sender of the e-mail')
+        required.add_argument('-f','--email-author', help='Sender of the e-mail')
         gmail.add_argument('-u','--username', help='Username to authenticate with')
         gmail.add_argument('-p','--password', help='Password to authenticate with')
         mailgun.add_argument('-a','--api', help="MailGun API key to authenticate with")
@@ -81,7 +88,7 @@ def main():
 
         args = parser.parse_args()
 
-        if args.body and args.infrastructure and args.subject and args.from_email:
+        if args.body and args.infrastructure and args.subject and args.email_author:
                 # If passing the singular recipient e-mail
                 if args.recipient:
                         # If passing both arguments...
@@ -98,5 +105,5 @@ def main():
                 else:
                         print("[*] Error - passing insufficient arguments.")
         else:
-                parser.print_help()      
+                parser.print_help()   
 main()
