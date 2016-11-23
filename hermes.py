@@ -1,4 +1,4 @@
-mport argparse
+import argparse
 import smtplib
 import sys
 import time
@@ -8,12 +8,6 @@ def mailgun_emailer(api, domain, filename, subject, sender, recipient):
         pass
 
 def gmail_emailer(username, password, filename, subject, sender, recipient):
-        print(username)
-        print(password)
-        print(filename)
-        print(subject)
-        print(sender)
-        print(recipient)
         with open(filename) as fp:
                 # Create a text/plain message
                 body = fp.read()
@@ -105,5 +99,5 @@ def main():
                 else:
                         print("[*] Error - passing insufficient arguments.")
         else:
-                parser.print_help()   
+                parser.print_help()      
 main()
