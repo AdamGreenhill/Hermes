@@ -7,8 +7,11 @@ Features:
   - Send e-mails with a delay between sending
 
 ## Setup
-- Install Python 3 and Python Pip
-- Install Requests
+- Install Python 3 and Python Pip: `sudo apt-get install python3 && sudo apt-get install python3-pip`
+- Install Requests: `pip3 install requests`
+
+## Usage
+1. First
 
 ## Examples
 ### Basic SMTP / Postfix
@@ -41,6 +44,9 @@ python3 emailer.py -i mailgun 				\
 	-a '<MailGun API key>' 		 			\
 	-d '<domain of e-mail>' 				
 ```
+## Common errors
+- Google will return an error if the account does not have [Less Secure Apps](https://www.google.com/settings/security/lesssecureapps) enabled 
+- Your firewall may prevent the script from connecting directly to an SMTP server
 
 ## Contribute
 Spotted a bug? Want to add features? Increase the performance?
