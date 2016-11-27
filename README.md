@@ -11,6 +11,31 @@ Features:
 - Install Requests: `pip3 install requests`
 
 ## Usage
+To start using Hermes, there are a number of required flags that need to be used.
+- `--infrastructure`|`-i` the infrastructure sending the e-mails. Options: basic, gmail, minigun
+- `--body`|`-b` textfile containing the body of the e-mail
+- `--subject`|`-s` e-mail subject
+- `--email-author`|`-f` sender of the e-mail
+
+The next required flag is choosing the recipient(s). This can be done in one of two ways:
+- `--recipient`|`-r` a singular e-mail
+- `--list-of-recipients`|`-l` textfile with e-mails separated by newlines
+
+Depending on what infrastructure you plan to use, there are certain flags that need to be present.
+- Basic SMTP / Postfix
+	- `--host` IP address of the SMTP server
+- Google Mail / Google for Work
+	- `--username`|`-u` username to authenticate with
+	- `--password`|`-p` password to authenticate with
+- MailGun
+	- `--api`|`-a` MailGun API key to authenticate with
+	- `--domain` Domain to send MailGun e-mail from
+
+Optionally, there are some modifier flags:
+- `--delay`|`-d` delay the sending of e-mails by the given number of seconds
+- `--attachment` add an attachment to the e-mail being sent (not available for gmail, basic at present)
+- `--encoding`|`-e` change how the e-mail will be received. Options: html, plain
+- `--verbose`|`-v` print SMTP errors as they occur 
 
 ## Examples
 ### Basic SMTP / Postfix
