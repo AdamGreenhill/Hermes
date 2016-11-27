@@ -128,7 +128,7 @@ def main():
 	parser     = argparse.ArgumentParser(description='Sends e-mails via a number of means.')
 	#       Create groups
 	required   = parser.add_argument_group("Required", "The following flags are required to run the script.")
-	recipients = parser.add_argument_group("Recipients", "Select one method where the e-mail recipients will be found.")
+	recipients = parser.add_argument_group("Recipients", "Select whether the e-mail will be sent to a single recipient or multiple.")
 	basic    = parser.add_argument_group("Basic SMTP", "Please add the following flags to enable Basic SMTP / Postfix sending.")
 	gmail      = parser.add_argument_group("Google Mail", "Please add the following flags to enable G-Mail sending.")
 	mailgun    = parser.add_argument_group("MailGun", "Please add the following flags to enable MailGun sending.")

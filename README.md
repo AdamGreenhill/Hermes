@@ -11,7 +11,6 @@ Features:
 - Install Requests: `pip3 install requests`
 
 ## Usage
-1. First
 
 ## Examples
 ### Basic SMTP / Postfix
