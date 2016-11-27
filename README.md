@@ -4,7 +4,8 @@ Hermes is the swiss army knife of sending command line e-mails.
 Features:
   - Send e-mails via Basic SMTP, Google Mail, MailGun
   - Send e-mails to a list of recipients
-  - Send e-mails with a delay between sending
+  - Send e-mails with attachments
+  - Send e-mails with configurable delays between sending
 
 ## Setup
 - Install Python 3 and Python Pip: `sudo apt-get install python3 && sudo apt-get install python3-pip`
