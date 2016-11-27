@@ -71,6 +71,7 @@ python3 emailer.py -i mailgun 				\
 ```
 ## Common errors
 - Google will return an error if the account does not have [Less Secure Apps](https://www.google.com/settings/security/lesssecureapps) enabled 
+- Google will not work if two-factor authentication is enabled even with Less Secure Apps enabled
 - Your firewall may prevent the script from connecting directly to an SMTP server
 
 ## Contribute
