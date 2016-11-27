@@ -1,11 +1,28 @@
 import argparse
+import logging
 import requests
 import smtplib
 import sys
 import time
+from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
-def mailgun_emailer(api, domain, filename, subject, sender, recipient, htmlbody, attachments):
+def create_message(subject, sender, recipient, body, encoding):
+	# Establish MIME message
+	msg            = MIMEMultipart('alternative')
+	msg['Subject'] = subject
+	msg['From']    = sender
+	msg['To']      = recipient
+
+	if str(encoding).lower() == "html":
+		msg.attach(MIMEText('Please enable HTML to view this e-mail.', 'plain'))
+		msg.attach(MIMEText(body, 'html'))
+	else:
+		msg.attach(MIMEText(body, 'plain'))
+
+	return msg
+
+def mailgun_emailer(api, domain, filename, subject, sender, recipient, encoding, attachments):
 	url = 'https://api.mailgun.net/v3/{}/messages'.format(domain)
 	auth = ('api', api)
 	data = {}
@@ -13,7 +30,7 @@ def mailgun_emailer(api, domain, filename, subject, sender, recipient, htmlbody,
 
 	with open(filename) as fp:
 
-		if htmlbody:
+		if str(encoding).lower() == "html":
 			data = {
 				'from':sender,
 				'to':recipient,
@@ -26,17 +43,17 @@ def mailgun_emailer(api, domain, filename, subject, sender, recipient, htmlbody,
 				'from':sender,
 				'to':recipient,
 				'subject':subject,
-				'text': MIMEText(fp.read()),
+				'text': fp.read(),
 			}
 
-		if attachments != "":
+		if attachments is not None:
 			response = requests.post(url, auth=auth, data=data, files=files)
-			print("[!] Successfully sent API call to mailgun with attachment | Destination: %s", recipient)
+			print("[!] Successfully sent API call to mailgun with attachment | Destination: %s" % recipient)
 		else:
 			response = requests.post(url, auth=auth, data=data)
-			print("[!] Successfully sent API call to mailgun | Destination: %s", recipient)
+			print("[!] Successfully sent API call to mailgun | Destination: %s" % recipient)
 
-def gmail_emailer(username, password, filename, subject, sender, recipient):
+def gmail_emailer(username, password, filename, subject, sender, recipient, encoding, verbose):
 	with open(filename) as fp:
 		# Create a text/plain message
 		body = fp.read()
@@ -48,42 +65,49 @@ def gmail_emailer(username, password, filename, subject, sender, recipient):
 		s.login(username, password)
 
 		# Setup message
-		msg = '\r\n'.join(['To: %s' % recipient,
-							'From: %s' % sender,
-							'Subject: %s' % subject,
-							'', body])
+		msg = create_message(subject, sender, recipient, body, encoding)
+		
+		# Attempt to send e-mail
 		try:
-			s.sendmail(sender, recipient, msg)
-			print("[!] Successfully sent gmail | Destination: %s", recipient)
-		except:
-			print("[*] Error - could not send gmail | Destination: %s", recipient)
+			s.sendmail(sender, recipient, msg.as_string())
+			print("[!] Successfully sent gmail | Destination: %s" % recipient)
+			s.quit()
 
-def postfix_emailer(filename, subject, sender, recipient):
+		# Catching errors
+		except Exception as e:
+			error_str = "[*] Error - could not send gmail | Destination: %s" % recipient
+			if verbose:
+				logging.exception(error_str)
+			else:
+				print(error_str)
+
+def basic_emailer(filename, subject, sender, recipient, host, encoding, verbose):
 	with open(filename) as fp:
 		# Create a text/plain message
-		msg = MIMEText(fp.read())
-		msg['Subject'] = subject
-		msg['From'] = sender
-		msg['To'] = recipient
+		msg = create_message(subject, sender, recipient, body, encoding)
 
 		# Send the message via our own SMTP server.
-		s = smtplib.SMTP('localhost')
+		s = smtplib.SMTP(host)
 		
 		try:
 			s.send_message(msg)
-			print("[!] Successfully sent postfix email | Destination: %s", recipient)
-		except:
-			print("[*] Error - could not send postfix email | Destination: %s", recipient)
+			print("[!] Successfully sent postfix email | Destination: %s" % recipient)
 			s.quit()
+		except Exception as e:
+			error_str = "[*] Error - could not send postfix email | Destination: %s" % recipient
+			if verbose:
+				logging.exception(error_str)
+			else:
+				print(error_str)
 
 def email_controller(args, destination_email):
 	# Decide where to route e-mails to
-	if args.infrastructure == "mailgun":
-		mailgun_emailer(args.api, args.domain, args.body, args.subject, args.email_author, destination_email, args.enable_html, args.attachment)
+	if args.infrastructure == "basic":
+		basic_emailer(args.body, args.subject, args.email_author, destination_email, args.host, args.encoding, args.verbose)
 	elif args.infrastructure == "gmail":
-		gmail_emailer(args.username, args.password, args.body, args.subject, args.email_author, destination_email)
-	elif args.infrastructure == "postfix":
-		postfix_emailer(args.body, args.subject, args.email_author, destination_email)
+		gmail_emailer(args.username, args.password, args.body, args.subject, args.email_author, destination_email, args.encoding, args.verbose)
+	elif args.infrastructure == "mailgun":
+		mailgun_emailer(args.api, args.domain, args.body, args.subject, args.email_author, destination_email, args.encoding, args.attachment, args.verbose)
 	else:
 		print("[*] Error - incorrect infrastructure parameter.")
 
@@ -93,6 +117,7 @@ def banner():
 	print(" ||''''||   ||''|     ||''|'    |'|..'||   ||''|      ''|||. ")
 	print(" ||    ||   ||        ||   |.   | '|' ||   ||       .     '||")
 	print(".||.  .||. .||.....| .||.  '|' .|. | .||. .||.....| |'....|' ")
+	print("")
 
 def main():
 	# Create initial definition of variables
@@ -104,14 +129,15 @@ def main():
 	#       Create groups
 	required   = parser.add_argument_group("Required", "The following flags are required to run the script.")
 	recipients = parser.add_argument_group("Recipients", "Select one method where the e-mail recipients will be found.")
-	mailgun    = parser.add_argument_group("MailGun", "Please add the following flags to enable MailGun sending.")
+	basic    = parser.add_argument_group("Basic SMTP", "Please add the following flags to enable Basic SMTP / Postfix sending.")
 	gmail      = parser.add_argument_group("Google Mail", "Please add the following flags to enable G-Mail sending.")
-	postfix    = parser.add_argument_group("Postfix", "To use a local postfix there are no additional flags required. Just enable with '-i'.")
+	mailgun    = parser.add_argument_group("MailGun", "Please add the following flags to enable MailGun sending.")
 	optional   = parser.add_argument_group("Optional", "Use the following flags to manipulate the sending of e-mails")
 	required.add_argument('-i','--infrastructure', help='Technology sending the e-mails (gmail, mailgun, local postfix)')
 	required.add_argument('-b','--body', help='Textfile containing the body of the email')
 	required.add_argument('-s','--subject', help='E-mail subject')
 	required.add_argument('-f','--email-author', help='Sender of the e-mail')
+	basic.add_argument('--host', help='IP Address of SMTP server')
 	gmail.add_argument('-u','--username', help='Username to authenticate with')
 	gmail.add_argument('-p','--password', help='Password to authenticate with')
 	mailgun.add_argument('-a','--api', help="MailGun API key to authenticate with")
@@ -120,7 +146,8 @@ def main():
 	recipients.add_argument('-l','--list-of-emails', help='Textfile containing a list of destination e-mails')
 	optional.add_argument('-d', '--delay', help="Delay the sending of e-mails by a number of seconds.", type=int)
 	optional.add_argument('--attachment', help="Add an attachment to the e-mail you're sending")
-	optional.add_argument('--enable-html', help="Enable rich text e-mails. This will send rendered HTML in the e-mail.")
+	optional.add_argument('-e', '--encoding', help="Select how the e-mail will be encoded: html, plain. (default: plain)")
+	optional.add_argument('-v', '--verbose', help="Print SMTP errors when they occur", default=False, action='store_true')
 
 	args = parser.parse_args()
 
