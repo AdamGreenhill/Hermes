@@ -4,10 +4,12 @@ import requests
 import smtplib
 import sys
 import time
+from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from os.path import basename
 
-def create_message(subject, sender, recipient, body, encoding):
+def create_message(subject, sender, recipient, body, encoding, attachment):
 	# Establish MIME message
 	msg            = MIMEMultipart('alternative')
 	msg['Subject'] = subject
@@ -20,9 +22,18 @@ def create_message(subject, sender, recipient, body, encoding):
 	else:
 		msg.attach(MIMEText(body, 'plain'))
 
+	if attachment is not None:
+		with open(attachment, "rb") as fp:
+			part = MIMEApplication (
+					fp.read(),
+					Name=basename(f)
+				)
+			part['Content-Disposition'] = 'attachment; filename="%s"' % basename(f)
+			msg.attach(part)
+
 	return msg
 
-def mailgun_emailer(api, domain, filename, subject, sender, recipient, encoding, attachments):
+def mailgun_emailer(api, domain, filename, subject, sender, recipient, encoding, attachment):
 	url = 'https://api.mailgun.net/v3/{}/messages'.format(domain)
 	auth = ('api', api)
 	data = {}
@@ -46,14 +57,15 @@ def mailgun_emailer(api, domain, filename, subject, sender, recipient, encoding,
 				'text': fp.read(),
 			}
 
-		if attachments is not None:
+		if attachment is not None:
+			files = [(basename(attachment), open(attachment))]
 			response = requests.post(url, auth=auth, data=data, files=files)
 			print("[!] Successfully sent API call to mailgun with attachment | Destination: %s" % recipient)
 		else:
 			response = requests.post(url, auth=auth, data=data)
 			print("[!] Successfully sent API call to mailgun | Destination: %s" % recipient)
 
-def gmail_emailer(username, password, filename, subject, sender, recipient, encoding, verbose):
+def gmail_emailer(username, password, filename, subject, sender, recipient, encoding, attachment, verbose):
 	with open(filename) as fp:
 		# Create a text/plain message
 		body = fp.read()
@@ -65,7 +77,7 @@ def gmail_emailer(username, password, filename, subject, sender, recipient, enco
 		s.login(username, password)
 
 		# Setup message
-		msg = create_message(subject, sender, recipient, body, encoding)
+		msg = create_message(subject, sender, recipient, body, encoding, attachment)
 		
 		# Attempt to send e-mail
 		try:
@@ -81,10 +93,10 @@ def gmail_emailer(username, password, filename, subject, sender, recipient, enco
 			else:
 				print(error_str)
 
-def basic_emailer(filename, subject, sender, recipient, host, encoding, verbose):
+def basic_emailer(filename, subject, sender, recipient, host, encoding, attachment, verbose):
 	with open(filename) as fp:
 		# Create a text/plain message
-		msg = create_message(subject, sender, recipient, body, encoding)
+		msg = create_message(subject, sender, recipient, body, encoding, attachment)
 
 		# Send the message via our own SMTP server.
 		s = smtplib.SMTP(host)
@@ -103,9 +115,9 @@ def basic_emailer(filename, subject, sender, recipient, host, encoding, verbose)
 def email_controller(args, destination_email):
 	# Decide where to route e-mails to
 	if args.infrastructure == "basic":
-		basic_emailer(args.body, args.subject, args.email_author, destination_email, args.host, args.encoding, args.verbose)
+		basic_emailer(args.body, args.subject, args.email_author, destination_email, args.host, args.encoding, args.attachment, args.verbose)
 	elif args.infrastructure == "gmail":
-		gmail_emailer(args.username, args.password, args.body, args.subject, args.email_author, destination_email, args.encoding, args.verbose)
+		gmail_emailer(args.username, args.password, args.body, args.subject, args.email_author, destination_email, args.encoding, args.attachment, args.verbose)
 	elif args.infrastructure == "mailgun":
 		mailgun_emailer(args.api, args.domain, args.body, args.subject, args.email_author, destination_email, args.encoding, args.attachment, args.verbose)
 	else:

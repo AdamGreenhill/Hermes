@@ -33,7 +33,7 @@ Depending on what infrastructure you plan to use, there are certain flags that n
 
 Optionally, there are some modifier flags:
 - `--delay`|`-d` delay the sending of e-mails by the given number of seconds
-- `--attachment` add an attachment to the e-mail being sent (not available for gmail, basic at present)
+- `--attachment` add an attachment to the e-mail being sent
 - `--encoding`|`-e` change how the e-mail will be received. Options: html, plain
 - `--verbose`|`-v` print SMTP errors as they occur 
 
