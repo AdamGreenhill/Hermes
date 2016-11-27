@@ -41,7 +41,7 @@ Optionally, there are some modifier flags:
 ## Examples
 ### Basic SMTP / Postfix
 ```
-python3 emailer.py -i basic 				\
+python3 hermes.py -i basic	 				\
 	-b email_contents.txt 					\ 
 	-s "Subject of e-mail" 					\
 	-f "Author of E-mail"					\
@@ -51,7 +51,7 @@ python3 emailer.py -i basic 				\
 
 ### Google Mail / Google for Work
 ```
-python3 emailer.py -i gmail 				\
+python3 hermes.py -i gmail	 				\
 	-b email_contents.txt 					\ 
 	-s "Subject of e-mail" 					\
 	-f "Author of E-mail"					\
@@ -61,7 +61,7 @@ python3 emailer.py -i gmail 				\
 ```
 ### MailGun
 ```
-python3 emailer.py -i mailgun 				\
+python3 hermes.py -i mailgun 				\
 	-b email_contents.txt 					\ 
 	-s "Subject of e-mail" 					\
 	-f "Author of E-mail"					\
