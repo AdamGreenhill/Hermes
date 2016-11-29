@@ -9,12 +9,18 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from os.path import basename
 
-def create_message(subject, sender, recipient, body, encoding, attachment):
+def process_message(string, find_str, replace_str):
+	return string.replace(find_str, str(replace_str))
+
+def create_message(subject, sender, recipient, body, encoding, attachment, increment, find_str, replace_str):
 	# Establish MIME message
 	msg            = MIMEMultipart('alternative')
 	msg['Subject'] = subject
 	msg['From']    = sender
 	msg['To']      = recipient
+
+	if increment is not None:
+		body = process_message(body, find_str, replace_str)
 
 	if str(encoding).lower() == "html":
 		msg.attach(MIMEText('Please enable HTML to view this e-mail.', 'plain'))
@@ -65,7 +71,7 @@ def mailgun_emailer(api, domain, filename, subject, sender, recipient, encoding,
 			response = requests.post(url, auth=auth, data=data)
 			print("[!] Successfully sent API call to mailgun | Destination: %s" % recipient)
 
-def gmail_emailer(username, password, filename, subject, sender, recipient, encoding, attachment, verbose):
+def gmail_emailer(username, password, filename, subject, sender, recipient, encoding, attachment, increment, find_str, replace_str, verbose):
 	with open(filename) as fp:
 		# Create a text/plain message
 		body = fp.read()
@@ -77,7 +83,7 @@ def gmail_emailer(username, password, filename, subject, sender, recipient, enco
 		s.login(username, password)
 
 		# Setup message
-		msg = create_message(subject, sender, recipient, body, encoding, attachment)
+		msg = create_message(subject, sender, recipient, body, encoding, attachment, increment, find_str, replace_str)
 		
 		# Attempt to send e-mail
 		try:
@@ -112,12 +118,12 @@ def basic_emailer(filename, subject, sender, recipient, host, encoding, attachme
 			else:
 				print(error_str)
 
-def email_controller(args, destination_email):
+def email_controller(args, destination_email, find_str, replace_str):
 	# Decide where to route e-mails to
 	if args.infrastructure == "basic":
 		basic_emailer(args.body, args.subject, args.email_author, destination_email, args.host, args.encoding, args.attachment, args.verbose)
 	elif args.infrastructure == "gmail":
-		gmail_emailer(args.username, args.password, args.body, args.subject, args.email_author, destination_email, args.encoding, args.attachment, args.verbose)
+		gmail_emailer(args.username, args.password, args.body, args.subject, args.email_author, destination_email, args.encoding, args.attachment, args.incrementor, find_str, replace_str, args.verbose)
 	elif args.infrastructure == "mailgun":
 		mailgun_emailer(args.api, args.domain, args.body, args.subject, args.email_author, destination_email, args.encoding, args.attachment, args.verbose)
 	else:
@@ -134,7 +140,10 @@ def banner():
 def main():
 	# Create initial definition of variables
 	body = ""
+	counter = 0
 	password = ""
+	find_str = "{}"
+	replace_str = 0
 
 	# Define arguments for the script
 	parser     = argparse.ArgumentParser(description='Sends e-mails via a number of means.')
@@ -160,25 +169,30 @@ def main():
 	optional.add_argument('--attachment', help="Add an attachment to the e-mail you're sending")
 	optional.add_argument('-e', '--encoding', help="Select how the e-mail will be encoded: html, plain. (default: plain)")
 	optional.add_argument('-v', '--verbose', help="Print SMTP errors when they occur", default=False, action='store_true')
+	optional.add_argument('--incrementor', help="Find, increment, and replace a value in an e-mail. The passed number represents the starting point.", type=int)
 
 	args = parser.parse_args()
+
+	if args.incrementor:
+		replace_str = args.incrementor
 
 	if args.body and args.infrastructure and args.subject and args.email_author:
 		# If passing the singular recipient e-mail
 		if args.recipient:
+			banner()
 			# If passing both arguments...
 			if args.list_of_emails:
 				print("[*] Error - passing wrong arguments. -r/--recipient and -l/--list-of-emails are mutually exclusive.")
 				sys.exit(1)
-			banner()
-			email_controller(args, args.recipient)
+			email_controller(args, args.recipient, find_str, replace_str)
 		elif args.list_of_emails:
+			banner()
 			with open(args.list_of_emails) as fp:
 				for line in fp:
-					banner()
-					email_controller(args, line)
-					if args.d:
-						time.sleep(args.d)
+					email_controller(args, line, find_str, replace_str + counter)
+					if args.delay:
+						time.sleep(args.delay)
+					counter = counter + 1
 		else:
 			print("[*] Error - need to pass recipient(s). This can be done singular (-r) or through a textfile list (-l).")
 	else:
