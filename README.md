@@ -37,6 +37,7 @@ Optionally, there are some modifier flags:
 - `--attachment` add an attachment to the e-mail being sent
 - `--encoding`|`-e` change how the e-mail will be received. Options: html, plain
 - `--verbose`|`-v` print SMTP errors as they occur 
+- `--incrementor [start point]` the incrementor will search for occurences of '{}' in the e-mail, find, and replace it with a number. For each subsequent e-mail, the replaced number will increase by 1 
 
 ## Examples
 ### Basic SMTP / Postfix

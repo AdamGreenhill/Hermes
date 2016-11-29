@@ -39,11 +39,15 @@ def create_message(subject, sender, recipient, body, encoding, attachment, incre
 
 	return msg
 
-def mailgun_emailer(api, domain, filename, subject, sender, recipient, encoding, attachment):
+def mailgun_emailer(api, domain, filename, subject, sender, recipient, encoding, attachment, increment, find_str, replace_str, verbose):
 	url = 'https://api.mailgun.net/v3/{}/messages'.format(domain)
 	auth = ('api', api)
 	data = {}
 	files = {}
+	body = fp.read()
+	
+	if increment is not None:
+		body = process_message(body, find_str, replace_str)
 
 	with open(filename) as fp:
 
@@ -53,14 +57,14 @@ def mailgun_emailer(api, domain, filename, subject, sender, recipient, encoding,
 				'to':recipient,
 				'subject':subject,
 				'text': 'Please enable HTML to view contents of this e-mail.',
-				'html': fp.read(),
+				'html': body,
 			}
 		else:
 			data = {
 				'from':sender,
 				'to':recipient,
 				'subject':subject,
-				'text': fp.read(),
+				'text': body,
 			}
 
 		if attachment is not None:
@@ -99,10 +103,10 @@ def gmail_emailer(username, password, filename, subject, sender, recipient, enco
 			else:
 				print(error_str)
 
-def basic_emailer(filename, subject, sender, recipient, host, encoding, attachment, verbose):
+def basic_emailer(filename, subject, sender, recipient, host, encoding, attachment, increment, find_str, replace_str, verbose):
 	with open(filename) as fp:
 		# Create a text/plain message
-		msg = create_message(subject, sender, recipient, body, encoding, attachment)
+		msg = create_message(subject, sender, recipient, body, encoding, attachment, increment, find_str, replace_str)
 
 		# Send the message via our own SMTP server.
 		s = smtplib.SMTP(host)
@@ -121,11 +125,11 @@ def basic_emailer(filename, subject, sender, recipient, host, encoding, attachme
 def email_controller(args, destination_email, find_str, replace_str):
 	# Decide where to route e-mails to
 	if args.infrastructure == "basic":
-		basic_emailer(args.body, args.subject, args.email_author, destination_email, args.host, args.encoding, args.attachment, args.verbose)
+		basic_emailer(args.body, args.subject, args.email_author, destination_email, args.host, args.encoding, args.attachment, args.increment, find_str, replace_str, args.verbose)
 	elif args.infrastructure == "gmail":
 		gmail_emailer(args.username, args.password, args.body, args.subject, args.email_author, destination_email, args.encoding, args.attachment, args.incrementor, find_str, replace_str, args.verbose)
 	elif args.infrastructure == "mailgun":
-		mailgun_emailer(args.api, args.domain, args.body, args.subject, args.email_author, destination_email, args.encoding, args.attachment, args.verbose)
+		mailgun_emailer(args.api, args.domain, args.body, args.subject, args.email_author, destination_email, args.encoding, args.attachment, args.increment, find_str, replace_str, args.verbose)
 	else:
 		print("[*] Error - incorrect infrastructure parameter.")
 
